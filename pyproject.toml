@@ -1,0 +1,17 @@
+[project]
+name = "creditlens"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "apache-airflow>=3.2.0",
+    "catboost>=1.2.10",
+    "evidently>=0.7.21",
+    "jupyter>=1.1.1",
+    "kaggle>=2.0.1",
+    "lightgbm>=4.6.0",
+    "pandas>=3.0.2",
+    "scikit-learn>=1.8.0",
+    "shap>=0.51.0",
+    "xgboost>=3.2.0",
+]
