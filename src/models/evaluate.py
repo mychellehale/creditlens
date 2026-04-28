@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.metrics import classification_report, _ranking 
 
 
-def evaluate_model(fitted_model: Any, X_test: pd.DataFrame, y_test: pd.Series) -> str:
+def evaluate_model(fitted_model: Any, X_test: pd.DataFrame, y_test: pd.Series, output_dict = False) -> str:
     '''
     Evaluates a fitted classifier against the test set and returns a classification report.
     Reports precision, recall, F1-score, and support for each class.
@@ -14,10 +14,12 @@ def evaluate_model(fitted_model: Any, X_test: pd.DataFrame, y_test: pd.Series) -
     :type X_test: pd.DataFrame
     :param y_test: True labels for the test set
     :type y_test: pd.Series
+    :param output_dict: creates a dictionary of Classification Report outputs for Precision, Recall, AUC-PR
+    :type output_dict: dictionary 
     :return: Classification report as a formatted string
     :rtype: str
     '''
-    return classification_report(y_test, fitted_model.predict(X_test))
+    return classification_report(y_test, fitted_model.predict(X_test), output_dict=output_dict)
 
 def auc_eval(fitted_model: Any, X_test: pd.DataFrame, y_test:pd.Series) -> Any:
     '''
