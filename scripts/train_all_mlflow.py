@@ -44,8 +44,8 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 best_model_name = None
 
 for name, estimator in tqdm(models, desc="Training models"):
-    search = RandomizedSearchCV(estimator=estimator, param_distributions= param_grid,
-                                n_iter = 10, scoring = "recall").fit(X_train, y_train)
+    search = RandomizedSearchCV(estimator=estimator, param_distributions=param_grid,
+                                n_iter=10, scoring="recall", random_state=42).fit(X_train, y_train)
     tuned_vals = evaluate_model(search.best_estimator_, X_test, y_test, output_dict= True) 
     auc_pr = auc_eval(search.best_estimator_, X_test=X_test, y_test=y_test)
     with mlflow.start_run(run_name = name):
