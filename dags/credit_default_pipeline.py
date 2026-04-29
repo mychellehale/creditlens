@@ -1,3 +1,13 @@
+"""
+Daily retraining pipeline for CreditLens credit default risk model.
+
+Pulls the UCI Credit Card Default dataset from Kaggle, preprocesses it, and
+trains an XGBoost classifier with RandomizedSearchCV tuned for recall on class 1
+(default). Experiment parameters and metrics are logged to MLflow. The best
+estimator is saved to /tmp for downstream use.
+
+Tasks: load_data >> process_data >> run_model
+"""
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
@@ -15,15 +25,16 @@ from catboost import CatBoostClassifier
 import matplotlib.pyplot as plt
 import pickle as pickle
 import mlflow
-from datetime import datetime
 
 file_path = "uciml/default-of-credit-card-clients-dataset"
 
 def load_data():
+    """Download raw dataset from Kaggle and write to /tmp as parquet."""
     df = load.get_kaggle_data(file_path)
     df.to_parquet("/tmp/credit_raw.parquet")
 
 def process_data():
+    """Rename target column, compute class imbalance weight, and split into train/test parquet files."""
     df = pd.read_parquet("/tmp/credit_raw.parquet")
     df = df.rename(columns={'default.payment.next.month': 'target'})
     X = df.drop('target', axis = 1)
@@ -42,6 +53,7 @@ def process_data():
         f.write(str(weight_adjust))
 
 def run_model():
+    """Tune XGBoost with RandomizedSearchCV, log results to MLflow, and pickle the best estimator."""
     X_train = pd.read_parquet("/tmp/X_train.parquet")
     X_test = pd.read_parquet("/tmp/X_test.parquet")
     y_train = pd.read_parquet("/tmp/y_train.parquet").squeeze()
@@ -54,15 +66,16 @@ def run_model():
         "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.3],
     }
     search = RandomizedSearchCV(
-        estimator=lgb.LGBMClassifier(scale_pos_weight=weight_adjust),
+        estimator=xgb(scale_pos_weight=weight_adjust),
         param_distributions=param_grid,
         n_iter=10,
-        scoring="recall"
+        scoring="recall",
+        random_state=42,
     ).fit(X_train, y_train)
     model = search.best_estimator_
     tuned_vals = evaluate.evaluate_model(model, X_test, y_test, output_dict=True)
     mlflow.set_experiment("creditlens-default-risk")
-    with mlflow.start_run(run_name="LightGBM-scheduled"):
+    with mlflow.start_run(run_name="XGBoost-scheduled"):
         mlflow.log_param("max_depth", search.best_params_['max_depth'])
         mlflow.log_param("n_estimators", search.best_params_['n_estimators'])
         mlflow.log_param("learning_rate", search.best_params_['learning_rate'])

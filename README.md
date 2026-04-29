@@ -2,6 +2,8 @@
 
 CreditLens is an end-to-end credit default risk pipeline built on the UCI Credit Card Default dataset. It predicts whether a cardholder will default on their next payment and returns a probability score along with a risk rating. The project covers the full ML lifecycle: exploratory data analysis, model training and evaluation, explainability, experiment tracking, and a production-ready scoring API.
 
+**Stack:** Python · CatBoost · XGBoost · LightGBM · SHAP · FastAPI · Docker · Airflow · MLflow · scikit-learn · Evidently · uv
+
 ---
 
 ## The Problem
@@ -26,6 +28,8 @@ Three gradient boosting models were trained and compared: XGBoost, LightGBM, and
 
 SHAP values were computed for all three models to explain which features drive predictions. Payment status in the most recent month (PAY_0) is consistently the strongest predictor across all models.
 
+Evidently drift reports were generated to monitor distribution shift between training data and production scoring requests.
+
 EDA identified potential data quality issues in the EDUCATION feature (undocumented categories 0, 5, and 6) and confirmed that payment history separates defaulters from non-defaulters more cleanly than bill amounts or demographics.
 
 ---
@@ -34,11 +38,11 @@ EDA identified potential data quality issues in the EDUCATION feature (undocumen
 
 | Model | Recall (Class 1) | Precision (Class 1) | F1 (Class 1) | AUC-PR |
 |---|---|---|---|---|
-| XGBoost | 0.628 | **0.459** | 0.530 | **0.548** |
-| LightGBM | 0.622 | 0.459 | 0.528 | 0.545 |
-| **CatBoost** | **0.634** | 0.459 | **0.533** | 0.547 |
+| **XGBoost** | **0.630** | 0.458 | 0.530 | 0.548 |
+| LightGBM | 0.628 | 0.459 | 0.530 | **0.548** |
+| CatBoost | 0.628 | **0.461** | **0.532** | 0.546 |
 
-CatBoost has the highest recall and was selected as the production model.
+XGBoost has the highest recall and was selected as the production model. All three models are within ~0.002 recall of each other, reflecting a genuine tie under different random seeds.
 
 ---
 
@@ -96,7 +100,6 @@ docker run -p 8000:8000 creditlens
 
 ## Future Work
 
-- Evidently drift report to monitor distribution shift between training and production data
 - EDUCATION feature cleanup: group undocumented categories (0, 5, 6) into "other"
 - Threshold tuning: the default 0.5 threshold may not be optimal for recall-focused deployment
 - Expanded compliance documentation for production use under the EU AI Act
