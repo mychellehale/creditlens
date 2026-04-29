@@ -14,6 +14,8 @@ import lightgbm as lgb
 from catboost import CatBoostClassifier
 import matplotlib.pyplot as plt
 import pickle as pickle
+import mlflow
+from datetime import datetime
 
 file_path = "uciml/default-of-credit-card-clients-dataset"
 
@@ -41,34 +43,34 @@ def process_data():
 
 def run_model():
     X_train = pd.read_parquet("/tmp/X_train.parquet")
-    y_train= pd.read_parquet("/tmp/y_train.parquet")
+    X_test = pd.read_parquet("/tmp/X_test.parquet")
+    y_train = pd.read_parquet("/tmp/y_train.parquet").squeeze()
+    y_test = pd.read_parquet("/tmp/y_test.parquet").squeeze()
     with open("/tmp/weight_adjust.txt", "r") as f:
         weight_adjust = float(f.read())
-    hyperparam_tuning = RandomizedSearchCV(estimator = xgb(scale_pos_weight=weight_adjust, base_score = 0.5),
-                                        n_iter=10,
-                                        param_distributions= {'max_depth': [4,5,6],
-                                                                'n_estimators': range(100,500),
-                                                                'learning_rate': [0.01, 0.05, 0.1, 0.2, 0.3]},
-                                        scoring='recall').fit(X_train, y_train)
-
-    model_tuned = train.data_model(X_train, y_train, 
-                            xgb(scale_pos_weight=weight_adjust, 
-                                base_score = 0.5,
-                                max_depth = hyperparam_tuning.best_params_['max_depth'],
-                                n_estimators = hyperparam_tuning.best_params_['n_estimators'],
-                                learning_rate = hyperparam_tuning.best_params_['learning_rate']))
-    with open("/tmp/model_tuned.pkl", "wb") as f:
-        pickle.dump(model_tuned, f)
-
-def save_values():
-    X_test = pd.read_parquet("/tmp/X_test.parquet")
-    y_test = pd.read_parquet("/tmp/y_test.parquet")
-    # Save Model values
-    with open("/tmp/model_tuned.pkl", "rb") as f:
-        model_tuned = pickle.load(f)
-    tuned_vals = evaluate.evaluate_model(model_tuned, X_test, y_test)
-    with open("/tmp/evaluation_results.txt", "w") as f:
-        f.write(str(tuned_vals))
+    param_grid = {
+        "max_depth": [4, 5, 6],
+        "n_estimators": range(100, 500),
+        "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.3],
+    }
+    search = RandomizedSearchCV(
+        estimator=lgb.LGBMClassifier(scale_pos_weight=weight_adjust),
+        param_distributions=param_grid,
+        n_iter=10,
+        scoring="recall"
+    ).fit(X_train, y_train)
+    model = search.best_estimator_
+    tuned_vals = evaluate.evaluate_model(model, X_test, y_test, output_dict=True)
+    mlflow.set_experiment("creditlens-default-risk")
+    with mlflow.start_run(run_name="LightGBM-scheduled"):
+        mlflow.log_param("max_depth", search.best_params_['max_depth'])
+        mlflow.log_param("n_estimators", search.best_params_['n_estimators'])
+        mlflow.log_param("learning_rate", search.best_params_['learning_rate'])
+        mlflow.log_metric("recall_class_1", tuned_vals['1']['recall'])
+        mlflow.log_metric("precision_class_1", tuned_vals['1']['precision'])
+        mlflow.log_metric("f1_class_1", tuned_vals['1']['f1-score'])
+    with open("/tmp/best_model_tuned.pkl", "wb") as f:
+        pickle.dump(model, f)
 
 with DAG(
     dag_id = 'credit_default_pipeline',
@@ -88,9 +90,4 @@ with DAG(
         task_id="run_model",
         python_callable=run_model,
         )
-    save_task = PythonOperator(
-        task_id="save_values",
-        python_callable=save_values,
-        )
-
-    load_task >> process_task >> run_task >> save_task
+    load_task >> process_task >> run_task
