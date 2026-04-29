@@ -7,6 +7,7 @@ WORKDIR /app
 # Install dependencies as root before switching users
 RUN apt-get update && apt-get install -y libgomp1 && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml uv.lock ./
+ENV MPLCONFIGDIR=/tmp/matplotlib
 RUN pip install uv && uv sync --no-dev --frozen
 
 # Copy source code and trained model

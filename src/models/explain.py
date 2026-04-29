@@ -1,7 +1,7 @@
 import shap
 import pandas as pd
 
-def shap_exp_xgb(X_test: pd.DataFrame, fitted_model):
+def shap_exp_gradient(X_test: pd.DataFrame, fitted_model):
     '''
     Generates SHAP values for a tree-based model (XGBoost, LightGBM, CatBoost)
     and renders a summary plot of feature importances.
