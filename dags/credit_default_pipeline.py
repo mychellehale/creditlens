@@ -2,7 +2,7 @@
 Daily retraining pipeline for CreditLens credit default risk model.
 
 Pulls the UCI Credit Card Default dataset from Kaggle, preprocesses it, and
-trains an XGBoost classifier with RandomizedSearchCV tuned for recall on class 1
+trains a CatBoost classifier with RandomizedSearchCV tuned for recall on class 1
 (default). Experiment parameters and metrics are logged to MLflow. The best
 estimator is saved to /tmp for downstream use.
 
@@ -37,6 +37,7 @@ def process_data():
     """Rename target column, compute class imbalance weight, and split into train/test parquet files."""
     df = pd.read_parquet("/tmp/credit_raw.parquet")
     df = df.rename(columns={'default.payment.next.month': 'target'})
+    df = df.drop(columns=['ID'], errors='ignore')
     X = df.drop('target', axis = 1)
     y = df['target']
 
@@ -53,7 +54,7 @@ def process_data():
         f.write(str(weight_adjust))
 
 def run_model():
-    """Tune XGBoost with RandomizedSearchCV, log results to MLflow, and pickle the best estimator."""
+    """Tune CatBoost with RandomizedSearchCV, log results to MLflow, and pickle the best estimator."""
     X_train = pd.read_parquet("/tmp/X_train.parquet")
     X_test = pd.read_parquet("/tmp/X_test.parquet")
     y_train = pd.read_parquet("/tmp/y_train.parquet").squeeze()
@@ -66,7 +67,7 @@ def run_model():
         "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.3],
     }
     search = RandomizedSearchCV(
-        estimator=xgb(scale_pos_weight=weight_adjust),
+        estimator=CatBoostClassifier(scale_pos_weight=weight_adjust, random_seed=42, verbose=0),
         param_distributions=param_grid,
         n_iter=10,
         scoring="recall",
@@ -75,7 +76,7 @@ def run_model():
     model = search.best_estimator_
     tuned_vals = evaluate.evaluate_model(model, X_test, y_test, output_dict=True)
     mlflow.set_experiment("creditlens-default-risk")
-    with mlflow.start_run(run_name="XGBoost-scheduled"):
+    with mlflow.start_run(run_name="CatBoost-scheduled"):
         mlflow.log_param("max_depth", search.best_params_['max_depth'])
         mlflow.log_param("n_estimators", search.best_params_['n_estimators'])
         mlflow.log_param("learning_rate", search.best_params_['learning_rate'])
