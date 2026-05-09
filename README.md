@@ -73,7 +73,7 @@ The pattern is consistent with sound credit risk intuition:
 
 ---
 
-## EU AI Act compliance
+## EU AI Act Framing
 
 CreditLens is classified as a high-risk AI system under EU AI Act Annex III, Section 5(b). See `docs/eu_ai_act_compliance.md` for a full mapping against Articles 9, 10, 13, and 14. Compliance considerations were designed in from the start, not bolted on after.
 
@@ -139,9 +139,3 @@ docker run -p 8000:8000 creditlens
 - **Disparate impact analysis** across age, sex, education, and marriage to confirm fairness in *outcomes* even though demographic features have low SHAP impact. EU AI Act Article 10 framing.
 - **Threshold tuning**: 0.5 may not be optimal for recall-focused deployment
 - **Expanded compliance documentation** for production use under the EU AI Act
-
----
-
-## Compliance
-
-CreditLens is classified as a high-risk AI system under EU AI Act Annex III, Section 5(b). See [docs/eu_ai_act_compliance.md](docs/eu_ai_act_compliance.md) for a full mapping against Articles 9, 10, 13, and 14.
