@@ -34,11 +34,9 @@ def load_data():
     df.to_parquet("/tmp/credit_raw.parquet")
 
 def process_data():
-    """Rename target column, compute class imbalance weight, and split into train/test parquet files."""
+    """Compute class imbalance weight and split into train/test parquet files."""
     df = pd.read_parquet("/tmp/credit_raw.parquet")
-    df = df.rename(columns={'default.payment.next.month': 'target'})
-    df = df.drop(columns=['ID'], errors='ignore')
-    X = df.drop('target', axis = 1)
+    X = df.drop('target', axis=1)
     y = df['target']
 
     y_negs = y[y==0].count()
