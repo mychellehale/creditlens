@@ -17,8 +17,7 @@ from src.models.evaluate import evaluate_model, auc_eval
 
 # Load data
 df = get_kaggle_data("uciml/default-of-credit-card-clients-dataset")
-df = df.rename(columns={"default.payment.next.month": "target"})
-X = df.drop(["ID", "target"], axis=1)
+X = df.drop("target", axis=1)
 y = df["target"]
 weight_adjust = float((y == 0).sum() / (y == 1).sum())
 

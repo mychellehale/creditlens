@@ -16,8 +16,7 @@ def split_data(dat: pd.DataFrame, target: str, split_ratio: float = 0.2) -> Tupl
     :return: X_train, X_test, y_train, y_test
     :rtype: Tuple of (pd.DataFrame, pd.DataFrame, pd.Series, pd.Series)
     '''
-    drop_cols = [target] + [c for c in ["ID"] if c in dat.columns]
-    X = dat.drop(drop_cols, axis=1)
+    X = dat.drop(target, axis=1)
     y = dat[target]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=split_ratio, random_state=42)
     return X_train, X_test, y_train, y_test

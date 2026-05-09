@@ -1,6 +1,6 @@
 # CreditLens
 
-**Last month's payment behavior dominates credit default prediction. Income, demographics, and 6-month bill history matter far less. Here's how I built and explained that model.**
+**Recent payment behavior and payment amounts dominate credit default prediction. Demographics contribute almost nothing. Here's how I built and explained that model.**
 
 CreditLens predicts whether a credit card holder will default on their next payment, with a probability score, a risk rating, and SHAP-based explanations for each prediction. It covers the full ML lifecycle: EDA, training, evaluation, explainability, experiment tracking, and a production scoring API.
 
@@ -10,9 +10,10 @@ CreditLens predicts whether a credit card holder will default on their next paym
 
 ## Headline findings
 
-- **Most recent payment status (PAY_0) is the dominant predictor**, with SHAP values ranging from roughly -1 to +2.5. The next most important features (credit limit and most recent bill amount) have less than half the impact.
-- **High credit limits protect against false-positive default predictions.** LIMIT_BAL has a clear inverse relationship in the SHAP plot: high limits push predictions away from default, low limits push toward. The bank's underwriting filter is doing real work.
-- **The model has near-zero reliance on demographic features.** AGE, MARRIAGE, and EDUCATION are at the bottom of the SHAP rankings with narrow value spreads. This is a fairness positive but should be confirmed with disparate impact analysis before any production use.
+- **Most recent payment status (PAY_0) is the dominant predictor**, with SHAP values ranging from roughly -1 to +2.5. Nothing else comes close.
+- **Payment amounts matter more than bill amounts.** Three of the top 7 features are PAY_AMT (how much was paid), and the pattern is consistent: customers paying less are pushed toward default, customers paying more are pushed away. The actual repayment behavior carries more signal than the size of the bill.
+- **High credit limits protect against false-positive default predictions.** LIMIT_BAL has a clear inverse relationship in the SHAP plot. The bank's underwriting filter is doing real work.
+- **The model has near-zero reliance on demographic features.** AGE and MARRIAGE are at the bottom of the SHAP rankings with narrow value spreads. EDUCATION dropped out of the top 20 entirely after the data cleanup. This is a fairness positive, but should be confirmed with disparate impact analysis before any production use.
 - **CatBoost wins on both recall and AUC-PR.** The three gradient boosting models are close, but CatBoost edges out the others on the metrics that matter most for unbalanced default detection.
 
 ---
@@ -31,6 +32,10 @@ Missing a default costs more than a false alarm. A bank that flags too many good
 - **Features**: Credit limit, demographics (age, sex, education, marriage), six months of payment status history, bill amounts, payment amounts
 - **Known limitation**: Taiwan credit card holders, 2005. May not generalize to other geographies or current credit behavior.
 
+### Data cleanup
+
+EDA flagged data quality issues in the EDUCATION feature: undocumented categories 0, 5, and 6 were not described in the dataset documentation. These categories were folded into category 4 ("other") to remove noise. The ID column was excluded from training to prevent identifier leakage.
+
 ---
 
 ## Methods
@@ -39,33 +44,32 @@ Three gradient boosting models were trained and compared: **XGBoost, LightGBM, C
 
 SHAP values were computed for all three models to explain which features drive predictions. Evidently drift reports monitor distribution shift between training data and production scoring requests.
 
-EDA flagged data quality issues in the EDUCATION feature (undocumented categories 0, 5, 6) and confirmed payment history separates defaulters from non-defaulters more cleanly than bill amounts or demographics. The ID column was excluded from training to prevent identifier leakage.
-
 ---
 
 ## Full results
 
 | Model    | Recall (Class 1) | Precision (Class 1) | F1 (Class 1) | AUC-PR |
 | -------- | ---------------- | ------------------- | ------------ | ------ |
-| CatBoost | 0.620            | 0.452               | 0.523        | 0.542  |
-| XGBoost  | 0.611            | 0.450               | 0.518        | 0.535  |
-| LightGBM | 0.600            | 0.447               | 0.512        | 0.532  |
+| CatBoost | 0.621            | 0.459               | 0.528        | 0.551  |
+| LightGBM | 0.613            | 0.451               | 0.520        | 0.528  |
+| XGBoost  | 0.608            | 0.463               | 0.526        | 0.543  |
 
-> Results are reproducible: `random_state=42` set on all estimators, search, and train/test split.
+> Sorted by recall (north-star metric). Results are reproducible: `random_state=42` set on all estimators, search, and train/test split.
 
-CatBoost has the highest recall and the highest AUC-PR and was selected as the production model. The three models are within ~0.02 recall of each other.
+CatBoost has the highest recall and AUC-PR and was selected as the production model. The three models are within ~0.013 recall of each other. XGBoost has the highest precision of the three.
 
 ### What drives predictions (CatBoost)
 
 The SHAP summary plot shows feature importance and direction:
 
-![SHAP summary plot showing PAY_0 as the dominant feature, followed by LIMIT_BAL and BILL_AMT1, with demographic features at the bottom](docs/shap_summary.png)
+![SHAP summary plot showing PAY_0 as the dominant feature, followed by LIMIT_BAL, BILL_AMT1, and several payment amount features. Demographic features cluster at the bottom with narrow spreads.](docs/shap_summary.png)
 
 The pattern is consistent with sound credit risk intuition:
 
 - High PAY_0 values (recent delinquency) push predictions toward default
 - High LIMIT_BAL (vetted high-limit customers) pushes away from default
-- Demographic features (age, marriage, education) contribute very little
+- Low payment amounts (PAY_AMT1, PAY_AMT2, PAY_AMT3) push toward default; high payment amounts push away
+- Demographic features (age, marriage) contribute very little; EDUCATION dropped out of the top 20 after cleanup
 
 ---
 
@@ -121,6 +125,9 @@ uvicorn src.api:app --reload
 **Run with Docker**
 
 ```bash
+# Train models first to generate a model artifact
+python -m scripts.train_all_mlflow
+
 docker build -t creditlens .
 docker run -p 8000:8000 creditlens
 ```
@@ -130,7 +137,6 @@ docker run -p 8000:8000 creditlens
 ## Future work
 
 - **Disparate impact analysis** across age, sex, education, and marriage to confirm fairness in *outcomes* even though demographic features have low SHAP impact. EU AI Act Article 10 framing.
-- **EDUCATION feature cleanup**: group undocumented categories (0, 5, 6) into "other"
 - **Threshold tuning**: 0.5 may not be optimal for recall-focused deployment
 - **Expanded compliance documentation** for production use under the EU AI Act
 

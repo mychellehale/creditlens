@@ -16,4 +16,7 @@ def get_kaggle_data(dataset: str) -> pd.DataFrame:
     path = kagglehub.dataset_download(dataset)
     csv_file = next(Path(path).glob("*.csv"))
     df = pd.read_csv(csv_file)
+    df = df.drop(columns=["ID"])
+    df = df.rename(columns={"default.payment.next.month": "target"})
+    df["EDUCATION"] = df["EDUCATION"].replace({0: 4, 5: 4, 6: 4})
     return df
