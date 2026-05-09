@@ -27,9 +27,9 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 mlflow.set_experiment("creditlens-default-risk")
 
 models = [
-    ("XGBoost", XGBClassifier(scale_pos_weight=weight_adjust)),
-    ("LightGBM", lgb.LGBMClassifier(scale_pos_weight=weight_adjust)),
-    ("CatBoost", CatBoostClassifier(scale_pos_weight=weight_adjust, verbose=0)),
+    ("XGBoost", XGBClassifier(scale_pos_weight=weight_adjust, random_state=42)),
+    ("LightGBM", lgb.LGBMClassifier(scale_pos_weight=weight_adjust, random_state=42)),
+    ("CatBoost", CatBoostClassifier(scale_pos_weight=weight_adjust, verbose=0, random_seed=42)),
 ]
 
 param_grid = {
