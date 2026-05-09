@@ -10,7 +10,7 @@ CreditLens predicts whether a credit card holder will default on their next paym
 
 ## Headline Findings
 
-- **Most recent payment status (PAY_0) is the dominant predictor**, with SHAP values ranging from roughly -1 to +2.5. Nothing else comes close.
+- **Most recent payment status (PAY_0) is the dominant predictor**, with SHAP values ranging from roughly -1 to +2. Nothing else comes close.
 - **Payment amounts matter more than bill amounts.** Three of the top 7 features are PAY_AMT (how much was paid), and the pattern is consistent: customers paying less are pushed toward default, customers paying more are pushed away. The actual repayment behavior carries more signal than the size of the bill.
 - **High credit limits protect against false-positive default predictions.** LIMIT_BAL has a clear inverse relationship in the SHAP plot. The bank's underwriting filter is doing real work.
 - **The model has near-zero reliance on demographic features.** AGE and MARRIAGE are at the bottom of the SHAP rankings with narrow value spreads. EDUCATION dropped out of the top 20 entirely after the data cleanup. This is a fairness positive, but should be confirmed with disparate impact analysis before any production use.
