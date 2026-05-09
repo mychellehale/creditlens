@@ -8,7 +8,7 @@ CreditLens predicts whether a credit card holder will default on their next paym
 
 ---
 
-## Headline findings
+## Headline Findings
 
 - **Most recent payment status (PAY_0) is the dominant predictor**, with SHAP values ranging from roughly -1 to +2.5. Nothing else comes close.
 - **Payment amounts matter more than bill amounts.** Three of the top 7 features are PAY_AMT (how much was paid), and the pattern is consistent: customers paying less are pushed toward default, customers paying more are pushed away. The actual repayment behavior carries more signal than the size of the bill.
@@ -32,7 +32,7 @@ Missing a default costs more than a false alarm. A bank that flags too many good
 - **Features**: Credit limit, demographics (age, sex, education, marriage), six months of payment status history, bill amounts, payment amounts
 - **Known limitation**: Taiwan credit card holders, 2005. May not generalize to other geographies or current credit behavior.
 
-### Data cleanup
+### Data Cleanup
 
 EDA flagged data quality issues in the EDUCATION feature: undocumented categories 0, 5, and 6 were not described in the dataset documentation. These categories were folded into category 4 ("other") to remove noise. The ID column was excluded from training to prevent identifier leakage.
 
@@ -46,7 +46,7 @@ SHAP values were computed for all three models to explain which features drive p
 
 ---
 
-## Full results
+## Full Results
 
 | Model    | Recall (Class 1) | Precision (Class 1) | F1 (Class 1) | AUC-PR |
 | -------- | ---------------- | ------------------- | ------------ | ------ |
@@ -58,7 +58,7 @@ SHAP values were computed for all three models to explain which features drive p
 
 CatBoost has the highest recall and AUC-PR and was selected as the production model. The three models are within ~0.013 recall of each other. XGBoost has the highest precision of the three.
 
-### What drives predictions (CatBoost)
+### What Drives Predictions (CatBoost)
 
 The SHAP summary plot shows feature importance and direction:
 
@@ -79,7 +79,7 @@ CreditLens is classified as a high-risk AI system under EU AI Act Annex III, Sec
 
 ---
 
-## Project structure
+## Project Structure
 
 ```
 creditlens/
@@ -98,7 +98,7 @@ creditlens/
 
 ---
 
-## How to run
+## How to Run
 
 **Setup**
 
